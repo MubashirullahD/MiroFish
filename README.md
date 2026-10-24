@@ -1,3 +1,7 @@
+> **This fork supports a local ChatGPT plan connection and SQLite memory.**
+> Follow [LOCAL_SETUP.md](LOCAL_SETUP.md) to use your existing subscription without
+> configuring a paid model API or Zep account. Upstream documentation follows.
+
 <div align="center">
 
 <img src="./static/image/MiroFish_logo_compressed.jpeg" alt="MiroFish Logo" width="75%"/>

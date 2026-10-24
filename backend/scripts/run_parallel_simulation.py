@@ -1034,6 +1034,7 @@ def create_model(config: Dict[str, Any], use_boost: bool = False):
     return ModelFactory.create(
         model_platform=ModelPlatformType.OPENAI,
         model_type=llm_model,
+        max_retries=0 if llm_base_url.rstrip('/').endswith('/api/chatgpt/v1') else 3,
     )
 
 

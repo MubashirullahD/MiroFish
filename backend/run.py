@@ -20,6 +20,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app import create_app
 from app.config import Config
+from werkzeug.serving import WSGIRequestHandler
+
+
+class LocalRequestHandler(WSGIRequestHandler):
+    """Keep OAuth authorization codes and state out of access logs."""
+    def log_request(self, code='-', size='-'):
+        original = self.requestline
+        if '/auth/callback?' in original:
+            self.requestline = original.split('/auth/callback?', 1)[0] + '/auth/callback [redacted]'
+        try:
+            super().log_request(code, size)
+        finally:
+            self.requestline = original
 
 
 def main():
@@ -37,12 +50,12 @@ def main():
     app = create_app()
     
     # 获取运行配置
-    host = os.environ.get('FLASK_HOST', '0.0.0.0')
+    host = os.environ.get('FLASK_HOST', '127.0.0.1')
     port = int(os.environ.get('FLASK_PORT', 5001))
     debug = Config.DEBUG
     
     # 启动服务
-    app.run(host=host, port=port, debug=debug, threaded=True)
+    app.run(host=host, port=port, debug=debug, threaded=True, request_handler=LocalRequestHandler)
 
 
 if __name__ == '__main__':

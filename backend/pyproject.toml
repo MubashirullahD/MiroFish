@@ -15,6 +15,7 @@ dependencies = [
     
     # LLM 相关
     "openai>=1.0.0",
+    "PyJWT[crypto]>=2.10,<3",
     
     # Zep Cloud
     "zep-cloud==3.25.0",
@@ -33,6 +34,8 @@ dependencies = [
     # 工具库
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
+    "pillow>=10.3.0",
+    "playwright>=1.58,<2",
 ]
 
 [project.optional-dependencies]

@@ -457,6 +457,7 @@ class TwitterSimulationRunner:
         return ModelFactory.create(
             model_platform=ModelPlatformType.OPENAI,
             model_type=llm_model,
+            max_retries=0 if llm_base_url.rstrip('/').endswith('/api/chatgpt/v1') else 3,
         )
     
     def _get_active_agents_for_round(

@@ -7,6 +7,12 @@ from zep_cloud.core.api_error import ApiError as ZepApiError
 from app.utils import zep
 
 
+@pytest.fixture(autouse=True)
+def cloud_backend(monkeypatch):
+    """These contracts target Zep Cloud even when local .env uses SQLite."""
+    monkeypatch.setattr(zep.Config, "MEMORY_BACKEND", "zep")
+
+
 def test_permanent_zep_errors_fail_without_retry():
     calls = []
 

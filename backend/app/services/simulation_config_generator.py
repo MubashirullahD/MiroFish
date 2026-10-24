@@ -238,7 +238,8 @@ class SimulationConfigGenerator:
         
         self.client = OpenAI(
             api_key=self.api_key,
-            base_url=self.base_url
+            base_url=self.base_url,
+            **({'max_retries': 0} if self.base_url.rstrip('/').endswith('/api/chatgpt/v1') else {})
         )
     
     def generate_config(

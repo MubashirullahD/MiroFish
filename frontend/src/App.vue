@@ -1,9 +1,10 @@
 <template>
+  <ChatGPTConnection />
   <router-view />
 </template>
 
 <script setup>
-// 使用 Vue Router 来管理页面
+import ChatGPTConnection from './components/ChatGPTConnection.vue'
 </script>
 
 <style>
