@@ -1,6 +1,11 @@
 <template>
   <div class="env-setup-panel">
     <div class="scroll-container">
+      <div class="product-study-guide">
+        <strong>Testing your application?</strong>
+        <p>This workflow creates social agents from people in your documents. A product brief may contain no eligible people. Product testing lets you define hypothetical participants directly.</p>
+        <RouterLink to="/product-testing">Open product testing →</RouterLink>
+      </div>
       <!-- Step 01: 模拟实例 -->
       <div class="step-card" :class="{ 'active': phase === 0, 'completed': phase > 0 }">
         <div class="card-header">
@@ -1100,6 +1105,10 @@ onUnmounted(() => {
   stopConfigPolling()
 })
 </script>
+
+<style scoped>
+.product-study-guide{margin:16px;padding:18px;background:#f8f3e9;border:1px solid #ded5c4;border-radius:8px;font:14px/1.6 system-ui,sans-serif;color:#353c30}.product-study-guide p{margin:8px 0;color:#5b6355;font-size:13px}.product-study-guide a{color:#974225;font-weight:650;text-decoration:none}
+</style>
 
 <style scoped>
 .env-setup-panel {

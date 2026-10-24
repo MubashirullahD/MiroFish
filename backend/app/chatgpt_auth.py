@@ -220,6 +220,15 @@ def get_account_cache_scope() -> str:
     return hashlib.sha256(identity.encode()).hexdigest()
 
 
+def get_study_owner_scope() -> str:
+    """Keep saved studies available after the same account signs in again."""
+    account = _read('account.json')
+    if not account.get('access_token') or not account.get('subject') or not account.get('client_id'):
+        raise SubscriptionAuthError('Connect your ChatGPT account in MiroFish first.')
+    identity = '\0'.join(str(account.get(key, '')) for key in ('client_id', 'subject'))
+    return hashlib.sha256(identity.encode()).hexdigest()
+
+
 def _adapter_configured() -> bool:
     address = urlsplit(Config.LLM_BASE_URL)
     return (Config.LLM_MODEL_NAME == 'chatgpt-plan' and address.scheme == 'http'

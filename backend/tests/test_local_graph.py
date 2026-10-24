@@ -126,6 +126,35 @@ def test_sources_persist_and_repeated_facts_merge_with_provenance(local_memory):
     assert reopened.graph.episode.get(uuid_=second.uuid_).source_description == "simulation round 1"
 
 
+@pytest.mark.parametrize("product_type", ["Entity", "Product"])
+def test_unmodeled_products_do_not_become_people_or_bypass_ontology(local_memory, product_type):
+    client, model = local_memory
+    reply = extraction()
+    reply["entities"][1]["entity_type"] = product_type
+    model.replies[:] = [reply]
+    builder = GraphBuilderService()
+    graph_id = builder.create_graph("People-only persona ontology")
+    builder.set_ontology(graph_id, {
+        "entity_types": [{"name": "Person", "description": "A participant"}],
+        "edge_types": [],
+    })
+    submission = builder.add_text_batches(graph_id, ["Alice uses the Atlas application."])
+    result = wait_batch(client, submission.batch_id)
+    if product_type == "Product":
+        assert result.status == "failed"
+        assert fetch_all_nodes(client, graph_id) == []
+        assert fetch_all_edges(client, graph_id) == []
+    else:
+        assert result.status == "succeeded"
+        nodes = fetch_all_nodes(client, graph_id)
+        atlas = next(node for node in nodes if node.name == "Atlas")
+        assert "Entity" in atlas.labels and "Person" not in atlas.labels
+        personas = ZepEntityReader().filter_defined_entities(
+            graph_id, defined_entity_types=["Person"]
+        )
+        assert [entity.name for entity in personas.entities] == ["Alice"]
+
+
 def test_bad_extraction_fails_batch_without_partially_writing_nodes(local_memory):
     client, model = local_memory
     bad = extraction()

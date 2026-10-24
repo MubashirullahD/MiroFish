@@ -315,7 +315,7 @@ class SimulationManager:
             
             if filtered.filtered_count == 0:
                 state.status = SimulationStatus.FAILED
-                state.error = "没有找到符合条件的实体，请检查图谱是否正确构建"
+                state.error = "No eligible people or organizations were found. A product brief may contain only product concepts. Use Product Testing to define hypothetical participants directly."
                 self._save_simulation_state(state)
                 raise ValueError(state.error)
             

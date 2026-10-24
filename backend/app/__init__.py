@@ -65,7 +65,7 @@ def create_app(config_class=Config):
     def log_request():
         logger = get_logger('mirofish.request')
         logger.debug(f"请求: {request.method} {request.path}")
-        if not request.path.startswith('/api/chatgpt') and request.content_type and 'json' in request.content_type:
+        if not request.path.startswith(('/api/chatgpt', '/api/product-testing')) and request.content_type and 'json' in request.content_type:
             logger.debug(f"请求体: {request.get_json(silent=True)}")
     
     @app.after_request
@@ -85,6 +85,8 @@ def create_app(config_class=Config):
     from .subscription_proxy import chatgpt_proxy_bp
     app.register_blueprint(chatgpt_auth_bp)
     app.register_blueprint(chatgpt_proxy_bp)
+    from .api.product_testing import product_testing_bp
+    app.register_blueprint(product_testing_bp)
     
     # 健康检查
     @app.route('/health')

@@ -74,6 +74,60 @@ episodes and conflicting facts; it has no semantic reranker or automatic tempora
 invalidation. The original Zep Cloud mode remains available with
 `MEMORY_BACKEND=zep` and `ZEP_API_KEY`.
 
+## Product testing
+
+Open [Product testing](http://127.0.0.1:3000/product-testing), or follow the link
+from the home page or the agent-persona step. This workflow accepts explicitly
+defined hypothetical participants; it does not require people to be extracted
+from a product brief.
+
+- **First impressions:** supply a public page URL or a PNG, JPEG, or WebP
+  screenshot. Participants see only their background, goal, neutral questions,
+  and the frozen screen. The source brief is hidden until evaluation.
+- **Compare two designs:** supply exactly two screens with matching dimensions
+  and one hypothesis. Every participant sees each variant in a fresh session.
+  Labels and the preferred hypothesis are hidden from the evaluator. An
+  identical-image control is reported as model variation, never a design win.
+- **Browser walkthrough:** define a public HTTPS starting page, a task, and an
+  observable success URL fragment or visible text. Both conditions must match
+  when both are provided. The isolated browser can navigate, scroll, and click;
+  typing, sign-in, account changes, WebSockets, and non-GET/HEAD requests are not
+  enabled. Each participant gets a fresh context and a bounded action count.
+
+The local browser is installed by `setup:local`. For an existing installation:
+
+```sh
+npm run setup:browser
+```
+
+Captures wait for loading indicators and visible images. Blocked image, font,
+or stylesheet origins stop the study before inference; add the necessary public
+asset origins in capture settings or upload a ready screenshot. The configured
+origin and asset hosts are checked against public IP addresses and pinned for
+the browser session. Private apps are supported through screenshot upload, not
+automatic network access. Test geolocation is a fixed Karachi city-center point,
+not the machine's actual location; an app can still show its own initial map view.
+
+The first screenshot request checks the selected account model with an image
+challenge. It is counted in the study cap. Unsupported image input stops the
+study and never invokes a paid API fallback. The preview shows the maximum number
+of model requests before starting. Stopping prevents further study actions after
+the current operation. Interrupted studies retain completed sessions and can be
+resumed explicitly using the original model. Budget changes are explicit; failed
+attempts remain counted. Completed studies are immutable.
+
+Studies and transcripts live in `.local/product-testing/studies.sqlite3`;
+verified, content-addressed images live in `.local/product-testing/assets/`.
+Evidence exports retain source URLs, hashes, viewport, timestamps, prompt/model
+versions, participant inputs, original responses, and browser traces. Data is
+isolated by signed-in account; signing in again to the same client/account keeps
+saved studies accessible, while changing the connection stops active work.
+
+Each generated finding must quote a saved session. A complete report requires
+all planned sessions. Use **Human validation plan** to export a session script
+and an actual A/B measurement checklist. The tool does not instrument live
+traffic, recruit humans, or establish human conversion lift.
+
 ## Verification
 
 ```sh

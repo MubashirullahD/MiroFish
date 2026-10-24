@@ -8,6 +8,11 @@ import InteractionView from '../views/InteractionView.vue'
 
 const routes = [
   {
+    path: '/product-testing/:studyId?',
+    name: 'ProductTesting',
+    component: () => import('../views/ProductTestingView.vue')
+  },
+  {
     path: '/',
     name: 'Home',
     component: Home

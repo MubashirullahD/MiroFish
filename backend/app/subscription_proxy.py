@@ -308,6 +308,35 @@ def _text_content(content):
     _invalid("Message content must be text or a text content array.", "messages")
 
 
+def _message_content(content, role):
+    if not isinstance(content, list) or not any(isinstance(p, dict) and p.get("type") == "image_url" for p in content):
+        return _text_content(content)
+    if role != "user":
+        _invalid("Screenshot inputs are supported only in user messages.", "messages")
+    from .utils.study_images import validate_image_url
+    result = []
+    image_count = 0
+    for part in content:
+        if isinstance(part, dict) and part.get("type") == "text" and isinstance(part.get("text"), str):
+            result.append({"type": "input_text", "text": part["text"]})
+        elif isinstance(part, dict) and part.get("type") == "image_url" and isinstance(part.get("image_url"), dict):
+            image_count += 1
+            if image_count > 4:
+                _invalid("A message can contain at most four screenshots.", "messages")
+            source = part["image_url"]
+            detail = source.get("detail", "auto")
+            if detail not in {"auto", "low", "high"}:
+                _invalid("Unsupported screenshot detail level.", "messages")
+            try:
+                url = validate_image_url(source.get("url"))
+            except ValueError as error:
+                _invalid(str(error), "messages")
+            result.append({"type": "input_image", "image_url": url, "detail": detail})
+        else:
+            _invalid("Image messages may contain only text and screenshot parts.", "messages")
+    return result
+
+
 def chat_to_responses(body, *, account_scope=None, model_override=None):
     """Translate full chat history, keeping tool calls/results linked by call_id."""
     if not isinstance(body, dict):
@@ -330,7 +359,7 @@ def chat_to_responses(body, *, account_scope=None, model_override=None):
         if not isinstance(message, dict):
             _invalid("Each message must be an object.", "messages")
         role = message.get("role")
-        text = _text_content(message.get("content"))
+        text = _message_content(message.get("content"), role)
         if role == "tool":
             call_id = message.get("tool_call_id")
             if not isinstance(call_id, str) or not call_id:

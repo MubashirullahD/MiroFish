@@ -38,6 +38,8 @@ class Config:
         os.path.dirname(__file__), '../../.local/chatgpt')))
     CHATGPT_MAX_REQUESTS = int(os.environ.get('CHATGPT_MAX_REQUESTS', '100'))
     CHATGPT_MAX_CONCURRENT = int(os.environ.get('CHATGPT_MAX_CONCURRENT', '2'))
+    PRODUCT_TESTING_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.local/product-testing'))
+    PRODUCT_BROWSER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.local/browsers'))
     
     # 文件上传配置
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
