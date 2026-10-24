@@ -1,4 +1,4 @@
-"""Shared Zep Cloud client, request limits, and retry policy."""
+"""Shared graph-memory routing, Zep Cloud limits, and read retry policy."""
 
 from __future__ import annotations
 
@@ -62,8 +62,20 @@ def _cached_zep_client(api_key: str, timeout: float) -> Zep:
     )
 
 
-def get_zep_client(api_key: str | None = None, timeout: float | None = None) -> Zep:
-    """Return a process-shared, explicitly configured Zep Cloud client."""
+@lru_cache(maxsize=4)
+def _cached_local_client(path: str):
+    from .local_graph import LocalGraphClient
+    return LocalGraphClient(path)
+
+
+def get_zep_client(api_key: str | None = None, timeout: float | None = None) -> Any:
+    """Return shared local SQLite memory or the optional Zep Cloud client."""
+
+    backend = getattr(Config, "MEMORY_BACKEND", "zep")
+    if backend == "local":
+        return _cached_local_client(Config.LOCAL_GRAPH_PATH)
+    if backend != "zep":
+        raise ValueError("MEMORY_BACKEND must be local or zep")
 
     # zep-cloud gives ZEP_API_URL precedence even when base_url is explicit.
     # Reject it so this Cloud-only integration cannot silently target a
@@ -87,6 +99,7 @@ def clear_zep_client_cache() -> None:
     """Clear cached clients. Intended for tests and controlled reconfiguration."""
 
     _cached_zep_client.cache_clear()
+    _cached_local_client.cache_clear()
 
 
 def is_retryable_zep_error(error: BaseException) -> bool:

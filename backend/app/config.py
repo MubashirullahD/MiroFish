@@ -31,6 +31,13 @@ class Config:
     
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
+    MEMORY_BACKEND = os.environ.get('MEMORY_BACKEND', 'zep').lower()
+    LOCAL_GRAPH_PATH = os.environ.get('LOCAL_GRAPH_PATH', os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '../../.local/graphs.sqlite3')))
+    CHATGPT_AUTH_DIR = os.path.abspath(os.environ.get('CHATGPT_AUTH_DIR', os.path.join(
+        os.path.dirname(__file__), '../../.local/chatgpt')))
+    CHATGPT_MAX_REQUESTS = int(os.environ.get('CHATGPT_MAX_REQUESTS', '100'))
+    CHATGPT_MAX_CONCURRENT = int(os.environ.get('CHATGPT_MAX_CONCURRENT', '2'))
     
     # 文件上传配置
     MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
@@ -66,7 +73,9 @@ class Config:
         errors: list[str] = []
         if not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY 未配置")
-        if not cls.ZEP_API_KEY:
+        if cls.MEMORY_BACKEND not in {'zep', 'local'}:
+            errors.append('MEMORY_BACKEND must be local or zep')
+        if cls.MEMORY_BACKEND == 'zep' and not cls.ZEP_API_KEY:
             errors.append("ZEP_API_KEY 未配置")
         if os.environ.get("ZEP_API_URL"):
             errors.append("ZEP_API_URL 不受支持；MiroFish 仅连接 Zep Cloud")

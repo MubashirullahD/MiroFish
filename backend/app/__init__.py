@@ -40,7 +40,19 @@ def create_app(config_class=Config):
         logger.info("=" * 50)
     
     # 启用CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    is_local = app.config.get('MEMORY_BACKEND') == 'local' or app.config.get('LLM_MODEL_NAME') == 'chatgpt-plan'
+    allowed_origins = ['http://127.0.0.1:3000', 'http://localhost:3000'] if is_local else '*'
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
+    from .chatgpt_auth import require_local_request, SubscriptionAuthError
+
+    @app.before_request
+    def guard_local_workspace():
+        if is_local and request.path.startswith('/api/'):
+            require_local_request()
+
+    @app.errorhandler(SubscriptionAuthError)
+    def local_access_error(error):
+        return {'success': False, 'error': str(error), 'code': error.code}, error.status_code
     
     # 注册模拟进程清理函数（确保服务器关闭时终止所有模拟进程）
     from .services.simulation_runner import SimulationRunner
@@ -53,11 +65,13 @@ def create_app(config_class=Config):
     def log_request():
         logger = get_logger('mirofish.request')
         logger.debug(f"请求: {request.method} {request.path}")
-        if request.content_type and 'json' in request.content_type:
+        if not request.path.startswith('/api/chatgpt') and request.content_type and 'json' in request.content_type:
             logger.debug(f"请求体: {request.get_json(silent=True)}")
     
     @app.after_request
     def log_response(response):
+        if request.path.startswith('/api/chatgpt') or request.path == '/auth/callback':
+            response.headers['Cache-Control'] = 'no-store'
         logger = get_logger('mirofish.request')
         logger.debug(f"响应: {response.status_code}")
         return response
@@ -67,6 +81,10 @@ def create_app(config_class=Config):
     app.register_blueprint(graph_bp, url_prefix='/api/graph')
     app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
     app.register_blueprint(report_bp, url_prefix='/api/report')
+    from .chatgpt_auth import chatgpt_auth_bp
+    from .subscription_proxy import chatgpt_proxy_bp
+    app.register_blueprint(chatgpt_auth_bp)
+    app.register_blueprint(chatgpt_proxy_bp)
     
     # 健康检查
     @app.route('/health')

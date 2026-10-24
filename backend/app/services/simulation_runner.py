@@ -404,6 +404,10 @@ class SimulationRunner:
         total_hours = time_config.get("total_simulation_hours", 72)
         minutes_per_round = time_config.get("minutes_per_round", 30)
         total_rounds = int(total_hours * 60 / minutes_per_round)
+        # Keep subscription pilots bounded even if generated settings ask for days.
+        if Config.LLM_MODEL_NAME == 'chatgpt-plan':
+            cap = max(1, Config.OASIS_DEFAULT_MAX_ROUNDS)
+            max_rounds = min(max_rounds, cap) if max_rounds and max_rounds > 0 else cap
         
         # 如果指定了最大轮数，则截断
         if max_rounds is not None and max_rounds > 0:
