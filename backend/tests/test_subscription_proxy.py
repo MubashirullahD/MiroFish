@@ -159,6 +159,73 @@ def test_json_format_is_translated(client, transport):
     assert captured[0]["text"] == {"format": {"type": "json_object"}}
 
 
+def test_completed_item_events_supply_text_when_terminal_output_is_empty(client, transport):
+    item = {"id": "msg_live_shape", "type": "message", "role": "assistant", "status": "completed",
+            "content": [{"type": "output_text", "text": "MiroFish connected"}]}
+    events = [
+        {"type": "response.output_text.delta", "output_index": 0, "delta": "MiroFish connected"},
+        {"type": "response.output_item.done", "output_index": 0, "item": item},
+        {"type": "response.completed", "response": completion([])},
+    ]
+    transport(lambda _: httpx.Response(200, text=sse(*events)))
+    response = post(client)
+    assert response.status_code == 200
+    assert response.json["choices"][0]["message"]["content"] == "MiroFish connected"
+    assert response.json["usage"]["total_tokens"] == 16
+
+
+def test_completed_items_preserve_order_and_encrypted_tool_context(client, transport):
+    original = _tool_output("call_stream_items", text="Checking.")
+    captured = []
+    def upstream(request):
+        captured.append(json.loads(request.content))
+        if len(captured) == 1:
+            events = [{"type": "response.output_item.done", "output_index": i, "item": original[i]}
+                      for i in reversed(range(len(original)))]
+            return httpx.Response(200, text=sse(*events, {"type": "response.completed", "response": completion([])}))
+        return completed_response()
+    transport(upstream)
+    first = post(client)
+    assert first.status_code == 200
+    message = first.json["choices"][0]["message"]
+    assert message["content"] == "Checking."
+    assert message["tool_calls"][0]["id"] == "call_stream_items"
+    assert "opaque-encrypted-reasoning" not in first.text
+    assert post(client, messages=_continue_with(message)).status_code == 200
+    assert captured[1]["input"][1:-1] == original
+
+
+@pytest.mark.parametrize('ending,code', [
+    (None, 'interrupted_stream'),
+    ({'type': 'response.incomplete', 'response': {'status': 'incomplete'}}, 'incomplete_response'),
+    ({'type': 'response.failed', 'response': {'error': {'code': 'server_error'}}}, 'server_error'),
+])
+def test_done_output_items_never_override_missing_or_failed_terminal_event(client, transport, ending, code):
+    events = [{'type': 'response.output_item.done', 'output_index': 0, 'item': completion()['output'][0]}]
+    if ending:
+        events.append(ending)
+    transport(lambda _: httpx.Response(200, text=sse(*events)))
+    response = post(client)
+    assert response.status_code == 502
+    assert response.json['error']['code'] == code
+    assert 'Hello' not in response.text
+
+
+def test_terminal_output_is_not_duplicated_by_completed_item_events(client, transport):
+    item = completion()['output'][0]
+    transport(lambda _: httpx.Response(200, text=sse(
+        {'type': 'response.output_item.done', 'output_index': 0, 'item': item},
+        {'type': 'response.completed', 'response': completion([item])})))
+    assert post(client).json['choices'][0]['message']['content'] == 'Hello'
+
+
+def test_empty_completed_response_fails_without_claiming_a_successful_reply(client, transport):
+    transport(lambda _: completed_response([]))
+    response = post(client)
+    assert response.status_code == 502
+    assert response.json['error']['code'] == 'empty_upstream_response'
+
+
 @pytest.mark.parametrize("extra", [
     {"headers": {}},
     {"headers": {"Authorization": "Bearer incorrect"}},

@@ -463,6 +463,10 @@ def _sse_events(lines):
 
 
 def _collect_completion(payload, token):
+    # The subscription route can leave response.completed.output empty after
+    # sending canonical output_item.done events. Keep those final items, while
+    # still requiring the terminal success event before returning any content.
+    completed_items = {}
     with _http_client() as client:
         with client.stream("POST", RESPONSES_URL, headers={"Authorization": "Bearer " + token, "Accept": "text/event-stream"}, json=payload) as upstream:
             request_id = upstream.headers.get("x-request-id")
@@ -483,6 +487,13 @@ def _collect_completion(payload, token):
                     raise SubscriptionProxyError("invalid_upstream_stream", "ChatGPT returned an invalid event stream.", 502)
                 kind = event.get("type")
                 result = event.get("response") or {}
+                if kind == "response.output_item.done":
+                    index, item = event.get("output_index"), event.get("item")
+                    if type(index) is not int or not 0 <= index < 4096 or not isinstance(item, dict):
+                        raise SubscriptionProxyError("invalid_upstream_stream", "ChatGPT returned an invalid completed output item.", 502)
+                    if index in completed_items and completed_items[index] != item:
+                        raise SubscriptionProxyError("invalid_upstream_stream", "ChatGPT returned conflicting completed output items.", 502)
+                    completed_items[index] = item
                 if kind in ("response.failed", "error"):
                     data = result if kind == "response.failed" else {"error": event.get("error", event)}
                     data = data if isinstance(data, dict) else {}
@@ -495,7 +506,22 @@ def _collect_completion(payload, token):
                 if kind == "response.completed":
                     if not isinstance(result, dict) or result.get("status", "completed") != "completed":
                         raise SubscriptionProxyError("invalid_upstream_stream", "ChatGPT returned an invalid completion event.", 502)
-                    return result, _safe_identifier(request_id)
+                    terminal_output = result.get("output", [])
+                    if not isinstance(terminal_output, list):
+                        raise SubscriptionProxyError("invalid_upstream_stream", "ChatGPT returned an invalid completed output list.", 502)
+                    output = []
+                    last_index = max(len(terminal_output) - 1, max(completed_items, default=-1))
+                    for index in range(last_index + 1):
+                        terminal_item = terminal_output[index] if index < len(terminal_output) else None
+                        item = completed_items.get(index, terminal_item)
+                        if not isinstance(item, dict):
+                            raise SubscriptionProxyError("invalid_upstream_stream", "ChatGPT omitted a completed output item.", 502)
+                        if isinstance(terminal_item, dict) and terminal_item.get("id") and item.get("id") and terminal_item["id"] != item["id"]:
+                            raise SubscriptionProxyError("invalid_upstream_stream", "ChatGPT returned inconsistent output item identifiers.", 502)
+                        output.append(item)
+                    if not output:
+                        raise SubscriptionProxyError("empty_upstream_response", "ChatGPT completed without returning a reply or tool call.", 502)
+                    return {**result, "output": output}, _safe_identifier(request_id)
     raise SubscriptionProxyError("interrupted_stream", "The ChatGPT stream ended before completion. No partial response was accepted.", 502)
 
 

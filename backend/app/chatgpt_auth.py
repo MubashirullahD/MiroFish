@@ -383,6 +383,9 @@ def test_connection():
             data = response.json().get('error', {})
             raise SubscriptionAuthError(data.get('message', 'The connection test failed.'),
                                          data.get('code', 'test_failed'), response.status_code)
-        return jsonify(success=True, message=response.json()['choices'][0]['message']['content'])
+        message = response.json()['choices'][0]['message']['content']
+        if not isinstance(message, str) or not message.strip():
+            raise SubscriptionAuthError('ChatGPT completed without a text reply. The connection has not passed its test.', 'empty_model_response', 502)
+        return jsonify(success=True, message=message)
     except (httpx.HTTPError, ValueError, KeyError, IndexError) as exc:
         raise SubscriptionAuthError('The model connection test did not complete. Check the local service and retry.', 'test_failed', 503) from exc

@@ -189,3 +189,14 @@ def test_local_workspace_guards_existing_apis_against_foreign_websites(local_app
     assert response.status_code == 403
     assert 'Access-Control-Allow-Origin' not in response.headers
     assert client.get('/health', base_url='http://127.0.0.1:5001').status_code == 200
+
+
+def test_connection_test_rejects_an_empty_completed_reply(local_app, monkeypatch):
+    monkeypatch.setattr(auth, '_adapter_configured', lambda: True)
+    monkeypatch.setattr(auth, 'get_selected_model', lambda: 'model-test')
+    monkeypatch.setattr(auth.httpx, 'post', lambda *_, **__: auth.httpx.Response(
+        200, json={'choices': [{'message': {'content': ''}}]}))
+    response = local_app.test_client().post('/api/chatgpt/test', base_url='http://127.0.0.1:5001', json={})
+    assert response.status_code == 502
+    assert response.json['success'] is False
+    assert response.json['code'] == 'empty_model_response'

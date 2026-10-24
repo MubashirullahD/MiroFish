@@ -89,6 +89,13 @@ the installed CAMEL SDK, SQLite extraction/batch/persistence/failure behavior,
 and existing backend contracts. Mocked requests do not establish account access:
 the real connection test requires your own browser authorization.
 
+The live smoke check also passed with GPT-6 Luna: a nonempty connection reply,
+three extracted graph nodes/two relationships, and two tool-created posts in a
+one-round native OASIS simulation. That check starts with an empty feed. Seeded
+or longer Twitter runs can download an additional recommendation embedding model;
+first startup can also take time to load the ML libraries. Those larger runs
+have not been performance-tested by this smoke check.
+
 AI personas provide hypotheses about behavior. Check important findings with
 real users and application analytics before making product decisions.
 
